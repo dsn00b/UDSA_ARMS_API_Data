@@ -42,7 +42,7 @@ for (year in years) {
         URL <- paste0(end_point, "year=", year, "&report=", gsub(" ", "+", tolower(report)), 
                       "&state=", state, "&farmtype=", farmtype, "&", key_parameter)
         
-        Sys.sleep(5) # so as to not hit API call limit
+        Sys.sleep(0.05) # so as to not hit API call limit
         
         if (is.numeric(data)) {
           get_obj[[j]] <- httr::GET(URL) # to debug
