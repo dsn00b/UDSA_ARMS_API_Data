@@ -60,5 +60,5 @@ for (year in years) {
     }
   }
   i <- i + 1
-  print(paste0("Year ", i, "/", length(years), " complete"))
+  print(paste0("Year ", i, "/", length(years), " complete")) # to debug
 }
