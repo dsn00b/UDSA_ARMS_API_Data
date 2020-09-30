@@ -1,0 +1,22 @@
+Package: usda.arms.api
+Type: Package
+Title: Extract and Visualise Data from the USDA ARMS API
+Version: 1.0
+Date: 2020-09-30
+Author: Rojan and Shashi
+Maintainer: <shashiniyer@gmail.com>, <rojankarakaya@gmail.com>
+Description: Package to extract data made available through the USDA ARMS API and a Shiny app for visual exploratory analysis
+License: GPL-3 + file LICENSE
+RoxygenNote: 7.1.1
+Encoding: UTF-8
+Depends: 
+    R (>= 2.10)
+Suggests: 
+    testthat,
+    knitr,
+    rmarkdown
+Imports: 
+    ggplot2,
+    httr,
+    jsonlite
+VignetteBuilder: knitr
