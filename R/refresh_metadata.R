@@ -1,5 +1,6 @@
 #' @import httr
 #' @import jsonlite
+#' @export
 
 refresh_metadata <- function() {
   
@@ -30,7 +31,7 @@ refresh_metadata <- function() {
   
   end_point <- "https://api.ers.usda.gov/data/arms/farmtype?"
   URL <- paste0(end_point, key_parameter)
-  categories <- 
+  farmtypes <- 
     jsonlite::fromJSON(httr::content(httr::GET(URL), "text", encoding = "UTF-8"))$data[, c("id", "name")]
   
   # get 'categories' / 'category values' (or 'sub-categories') metadata

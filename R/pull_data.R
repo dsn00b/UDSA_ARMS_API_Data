@@ -1,5 +1,6 @@
 #' @import httr
 #' @import jsonlite
+#' @export
 
 pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all") {
   
@@ -7,6 +8,8 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   
   end_point <- "https://api.ers.usda.gov/data/arms/surveydata?"
   key_parameter <- "api_key=UzCB1lR6AR7XyiUpyIlhYYHuodrznWx1NqdHJgtz"
+  
+  if (!exists("metadata")) {metadata <- refresh_metadata()}
   
   # collect and process inputs
   
@@ -20,7 +23,7 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   
   # formulate api call
   
-  if (variable_id == "all") {
+  if (!variable_id == "all") {
     
     URL <- paste0(end_point, "year=", year, "&report=", gsub(" ", "+", tolower(report)), 
                   "&variable=", variable_id, "&state=", state, "&farmtype=", farmtype, "&", key_parameter)
@@ -33,7 +36,7 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   }
   
   # get api data
-  
+
   parsed_get_object <- jsonlite::fromJSON(httr::content(httr::GET(URL), "text", encoding = "UTF-8"))
   
   if ("error" %in% parsed_get_object) {
@@ -50,7 +53,12 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   
   } else {
     
-    return(parsed_get_object$data)
+    data <- parsed_get_object$data
+    data$var_rep <- paste0(data$variable_id, " (", data$report, ")")
+    data <- data[!is.na(data$estimate), ] # remove NAs
+    data <- data[]
+    
+    return(data)
     
   }
   
