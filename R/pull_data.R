@@ -50,7 +50,15 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   
   # get api data
 
-  parsed_get_object <- jsonlite::fromJSON(httr::content(httr::GET(URL), "text", encoding = "UTF-8"))
+  response <- httr::GET(URL)
+  parsed_get_object <- jsonlite::fromJSON(httr::content(response, "text", encoding = "UTF-8"))
+  
+  #throw an error if the API-ratelimit is low
+  if (as.numeric(response$headers[["x-ratelimit-remaining"]])<50){
+    warning("Slow down there cowboy! You're getting close to exceeding your hourly rate limit.")
+  }
+  
+  
   
   if ("error" %in% names(parsed_get_object)) {
     
