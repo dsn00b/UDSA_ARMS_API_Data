@@ -2,7 +2,7 @@
 #' @import dplyr
 #' @import data.table
 #' @import stringr
-#' @impoty GGally
+#' @import GGally
 
 server <- function(input, output) {
   
