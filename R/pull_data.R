@@ -4,7 +4,7 @@
 
 pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all") {
   year=as.numeric(year)
-  stopifnot(all(!(is.na(year))))
+  stopifnot(all(!is.na(year)))
   
   stopifnot(all(is.character(report),is.character(state),is.character(variable)))
   
