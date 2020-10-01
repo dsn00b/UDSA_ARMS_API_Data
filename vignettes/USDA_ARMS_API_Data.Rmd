@@ -16,4 +16,54 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(usda.arms.api)
+
+
 ```
+
+
+
+[add a table to illustrate the dataset]
+
+
+
+
+The function pull_data() takes 5 arguments: year, report type, state, farm type and variable. State, farm type and variable have default values of, respectively, "all [states]", "all farm types" and "all [variables]". 
+
+There are more granular subcategories; these have not been included as arguments as they are not conceptually independent of their supercategories. 
+
+```{r}
+
+apiCall1 <- pull_data(c(2015,2016,2017),"Farm Business Balance Sheet")
+apiCall1[1,c(1:10,18)]
+
+```
+
+We need metadata (specifically all the possible values of the 5 above-mentioned categories) in order to populate the drop-down menus in the control interface of the shiny app as well as for some internal use in the pull_data()-function. The refresh_metadata()-function downloads this information for us. While it is called automatically when the package is loaded, it can also be called in the shiny app by way of pressing the "update metadata"-button.
+
+refresh_metadata() takes no arguments.
+
+```{r}
+metadata <- refresh_metadata()
+
+```
+
+
+
+
+
+
+
+```{r, echo = FALSE}
+
+##attempt at in-browser display for the shiny app. Get back to it later, maybe?
+
+#shinyDirectory=paste0(dirname(getwd()),"/shiny_app/")
+
+#knitr::include_app(shinyDirectory)
+
+```
+
+
+
+
+
