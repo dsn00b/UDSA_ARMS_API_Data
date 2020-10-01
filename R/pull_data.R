@@ -3,20 +3,37 @@
 #' @export
 
 pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all") {
-  year=suppressWarnings(as.numeric(year))
+  
+  ## check input integrity
+  
+  # year
+  year = suppressWarnings(as.numeric(year))
   stopifnot(all(!is.na(year)))
   
-  stopifnot(all(is.character(report),is.character(state),is.character(variable)))
+  # report, state, variable
+  stopifnot(all(is.character(report), is.character(state), is.character(variable)))
   
-  if(is.numeric(farmtype)){
-    stopifnot(all(((farmtype%%1)==0),(farmtype<3),(farmtype>-1)))
-  }else{
+  # farmtype
+  if (is.numeric(farmtype)) {
+    
+    stopifnot(all((farmtype %% 1) == 0), (farmtype < 3), (farmtype > -1))
+    
+  } else {
+    
     stopifnot(is.character(farmtype))
+    
   }
   
-  americanStates <- c("all","AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY")
-  stopifnot(all((state %in% americanStates)))
+  # more checks for state
+  americanStates <- c("all","AL","AK","AZ","AR","CA","CO","CT","DE",
+                      "DC","FL","GA","HI","ID","IL","IN","IA","KS","KY",
+                      "LA","ME","MD","MA","MI","MN","MS","MO","MT","NE",
+                      "NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR",
+                      "PA","RI","SC","SD","TN","TX","UT","VT","VA","WA",
+                      "WV","WI","WY")
+  stopifnot(all((tolower(state) %in% tolower(americanStates))))
   
+  ## proceed with coding the actual function
   
   # initialise basic variables
   
@@ -51,23 +68,26 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
     
   }
   
-  # get api data
+  # make API call
 
   response <- httr::GET(URL)
   parsed_get_object <- jsonlite::fromJSON(httr::content(response, "text", encoding = "UTF-8"))
   
-  #throw an error if the API-ratelimit is low
-  if (as.numeric(response$headers[["x-ratelimit-remaining"]])<50){
+  # throw an error if the 'API-ratelimit' is low
+  
+  if (as.numeric(response$headers[["x-ratelimit-remaining"]]) <50) {
+    
     warning("Slow down there cowboy! You're getting close to exceeding your hourly rate limit.")
+    
   }
   
-  
+  # get api data
   
   if ("error" %in% names(parsed_get_object)) {
     
     if (parsed_get_object$error$code == "OVER_RATE_LIMIT") {
       
-      return("Unfortunately, API limit has been exceeded, try later")
+      return("Unfortunately, the API limit has been exceeded, try later")
     
     } else {
       
@@ -78,6 +98,7 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   } else {
     
     # get and clean the data
+    
     data <- parsed_get_object$data
     data$var_rep <- paste0(data$variable_id, " (", data$report, ")") # disambiguate variable-report relationship
     data <- data[!is.na(data$estimate), ] # remove NAs
