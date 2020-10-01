@@ -19,9 +19,9 @@ test_that("incorrect input for year throws error", {
   
 })
 
-test_that("incorrect input for year throws error", {
+test_that("correct input for year does not throw error", {
   
-  expect_error( pull_data(c(2000,"2001"),report="Farm Business Balance Sheet") )
+  expect_error( pull_data(c(2000,"2001"),report="Farm Business Balance Sheet"), NA )
   
 })
 
