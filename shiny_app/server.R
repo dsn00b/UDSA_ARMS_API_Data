@@ -14,8 +14,11 @@ server <- function(input, output) {
   # pull data based on user selection and render an output message
   shiny::observeEvent(input$pull_data, {
     
-    # data pull
+    # re-set global variable flags
+    pair_plot_flag <<- FALSE
+    corr_plot_flag <<- FALSE
     
+    # data pull
     state <- if (length(input$states) > 0) {
       metadata$states[metadata$states$name %in% input$states, "code"]
     } else {"all"}
@@ -46,13 +49,17 @@ server <- function(input, output) {
     output$variables_from_data <- shiny::renderUI({
       shiny::selectInput(inputId = "variables_visualisation",
                          label = "Select Variable(s) to Visualise",
-                         choices = as.list(unique(sliced_data[, var_rep])),
+                         choices = as.list(unique(pulled_data[, "var_rep"])),
                          multiple = TRUE,
                          selectize = FALSE)
     })
     
     # create remaining functionality in the 'Visualisation' tab, based on user input
     shiny::observeEvent(input$variables_visualisation, {
+      
+      # re-set global variable flags
+      pair_plot_flag <<- FALSE
+      corr_plot_flag <<- FALSE
       
       # process data
       exclude_columns <- c("category2", "category2_value", "variable_id", "variable_name",
@@ -61,10 +68,10 @@ server <- function(input, output) {
                            "variable_is_invalid", "median", "statistic", "rse",
                            "unreliable_estimate", "decimal_display", "report")
       
-      sliced_data <- pulled_data[pulled_data$var_rep %in% input$variables_visualisation, 
+      sliced_data <<- pulled_data[pulled_data$var_rep %in% input$variables_visualisation, 
                                  !(colnames(pulled_data) %in% (exclude_columns))]
       
-      sliced_data <- data.table::dcast(data.table::as.data.table(sliced_data),
+      sliced_data <<- data.table::dcast(data.table::as.data.table(sliced_data),
                                        year + state + farmtype + category + category_value ~ var_rep,
                                        value.var = "estimate")
       
@@ -72,8 +79,8 @@ server <- function(input, output) {
       output$avg_by_vars <- shiny::renderUI({
         
         shiny::checkboxGroupInput(inputId = "avg_by_vars_visualisation",
-                                  label = "Select more Average Variables by (leave all unselected 
-                                          if you don't want to average the variables)",
+                                  label = "Select one or more fields to Average Variables by
+                                  (leave all unselected if you don't want to average the variables)",
                                   choiceNames = as.list(c("Year", "State", "Farm Type", "Category")),
                                   choiceValues = 
                                     as.list(c("year", "state", "farmtype", "category_value")),
@@ -146,7 +153,8 @@ server <- function(input, output) {
                              label = "Filter by Sub Category(ies)",
                              choices = as.list(unique(
                                sliced_data[sliced_data$category == input$category_visualisation,
-                                           "category_value"])))             
+                                           "category_value"])),
+                             multiple = TRUE)             
           
         })
      
@@ -156,83 +164,165 @@ server <- function(input, output) {
       output$note <- shiny::renderText("Note: If any filters are to be applied, they will be done
                                        before any aggregation is done (if at all)")
       
-      # show plot_button
-      output$plot_button <- shiny::renderUI({
+      # show corr_plot_button
+      output$corr_plot_button <- shiny::renderUI({
         
-        shiny::actionButton(inputId = "plot_clicked", label = "Plot")
+        shiny::actionButton(inputId = "corr_plot_clicked", label = "Generate Correlation Plots")
         
       })
       
-      # process data and plot graphs if plot_button is clicked
-      shiny::observeEvent(input$plot_clicked, {
+      # show pair_plot_button
+      output$pair_plot_button <- shiny::renderUI({
         
-        ## process data
+        shiny::actionButton(inputId = "pair_plot_clicked", label = "Generate Pair Plots")
         
-        # filter by category      
-        plot_data <- sliced_data[sliced_data$category == input$category_visualisation, 
-                                 colnames(sliced_data) != "category"] # filter by category & remove category; it no longer serves any purpose
-        # filter by year
-        if (length(input$years_visualisation) > 0) {
+      })
+      
+      # process data and plot graphs if pair_plot_button is clicked
+      shiny::observeEvent(input$pair_plot_clicked, {
+        
+        # process data if needed
+        
+        if (!(pair_plot_flag || corr_plot_flag)) {
           
-          plot_data <- plot_data[plot_data$year %in% input$years_visualisation, ]
+          # filter by category      
+          plot_data <<- sliced_data[sliced_data$category == input$category_visualisation, ] # filter by category
+          
+          # filter by year
+          if (length(input$years_visualisation) > 0) {
+            
+            plot_data <<- plot_data[plot_data$year %in% input$years_visualisation, ]
+            
+          }
+          
+          # filter by state
+          if (length(input$states_visualisation) > 0) {
+            
+            plot_data <<- plot_data[plot_data$state %in% input$states_visualisation, ]
+            
+          }
+          
+          # filter by farmtype
+          if (length(input$farmtype_visualisation) > 0) {
+            
+            plot_data <<- plot_data[plot_data$farmtype %in% input$farmtype_visualisation, ]
+            
+          }
+          
+          # filter by category_value
+          if (length(input$cat_vals_visualisation) > 0) {
+            
+            plot_data <<- plot_data[plot_data$category_value %in% input$cat_vals_visualisation, ]
+            
+          }
+          
+          # trim and aggregate data
+          plot_data <<- plot_data %>% 
+            dplyr::select(c(input$avg_by_vars_visualisation, input$variables_visualisation))
+          
+          if (length(input$avg_by_vars_visualisation) > 0) {
+            
+            plot_data <<- plot_data %>% 
+              dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
+              dplyr::summarise_at(input$variables_visualisation, mean)
+            
+          }
           
         }
         
-        # filter by state
-        if (length(input$states_visualisation) > 0) {
-          
-          plot_data <- plot_data[plot_data$state %in% input$states_visualisation, ]
-          
-        }
+        # set global variable
         
-        # filter by farmtype
-        if (length(input$farmtype_visualisation) > 0) {
-          
-          plot_data <- plot_data[plot_data$farmtype %in% input$farmtype_visualisation, ]
-          
-        }
-        
-        # filter by category_value
-        if (length(input$cat_vals_visualisation) > 0) {
-          
-          plot_data <- plot_data[plot_data$category_value %in% input$cat_vals_visualisation, ]
-          
-        }
-        
-        # trim and aggregate data
-        plot_data <- plot_data %>% 
-          dplyr::select(c(input$avg_by_vars_visualisation, input$variables_visualisation))
-        
-        if (length(input$avg_by_vars_visualisation) > 0) {
-          
-          plot_data <- plot_data %>% 
-            dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
-            dplyr::summarise_at(input$variables_visualisation, mean)
-
-        }
+        corr_plot_flag <<- TRUE
         
         # plot
         
         if (length(input$analysis_variable_visualisation) > 0) {
           
-          output$pair_plot <- shiny::renderPlot({
+          output$plots <- shiny::renderPlot({
             
-            GGally::ggpairs(plot_data[, 
-                        c(input$analysis_variable_visualisation, input$variables_visualisation)], 
+            GGally::ggpairs(subset(plot_data, select =  
+                        c(input$analysis_variable_visualisation, input$variables_visualisation)), 
                         ggplot2::aes(colour=input$analysis_variable_visualisation)) 
             
           })
           
         } else {
           
-          output$pair_plot <- shiny::renderPlot({
+          output$plots <- shiny::renderPlot({
             
-            GGally::ggpairs(plot_data[, input$variables_visualisation]) 
+            GGally::ggpairs(subset(plot_data, select =  
+                        c(input$analysis_variable_visualisation, input$variables_visualisation))) 
             
           })
           
         }
 
+      })
+      
+      # process data and plot graphs if pair_plot_button is clicked
+      shiny::observeEvent(input$corr_plot_clicked, {
+        
+        # process data if needed
+        
+        if (!(pair_plot_flag || corr_plot_flag)) {
+          
+          # filter by category      
+          plot_data <<- sliced_data[sliced_data$category == input$category_visualisation, ] # filter by category
+          
+          # filter by year
+          if (length(input$years_visualisation) > 0) {
+            
+            plot_data <<- plot_data[plot_data$year %in% input$years_visualisation, ]
+            
+          }
+          
+          # filter by state
+          if (length(input$states_visualisation) > 0) {
+            
+            plot_data <<- plot_data[plot_data$state %in% input$states_visualisation, ]
+            
+          }
+          
+          # filter by farmtype
+          if (length(input$farmtype_visualisation) > 0) {
+            
+            plot_data <<- plot_data[plot_data$farmtype %in% input$farmtype_visualisation, ]
+            
+          }
+          
+          # filter by category_value
+          if (length(input$cat_vals_visualisation) > 0) {
+            
+            plot_data <<- plot_data[plot_data$category_value %in% input$cat_vals_visualisation, ]
+            
+          }
+          
+          # trim and aggregate data
+          plot_data <<- plot_data %>% 
+            dplyr::select(c(input$avg_by_vars_visualisation, input$variables_visualisation))
+          
+          if (length(input$avg_by_vars_visualisation) > 0) {
+            
+            plot_data <<- plot_data %>% 
+              dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
+              dplyr::summarise_at(input$variables_visualisation, mean)
+            
+          }
+          
+        }
+        
+        # set global variable
+        
+        corr_plot_flag <<- TRUE
+        
+        # plot
+        
+        output$plots <- shiny::renderPlot({
+          
+          GGally::ggcorr(subset(plot_data, select=input$variables_visualisation)) 
+          
+        })
+        
       })
       
     })

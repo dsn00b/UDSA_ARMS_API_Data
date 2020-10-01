@@ -102,16 +102,19 @@ ui <- shiny::fluidPage(
                                  # Add Note
                                  shiny::uiOutput(outputId = "note"),
                                  
-                                 # Button: Plot
-                                 shiny::uiOutput(outputId = "plot_button")
+                                 # Button: Corr Plot
+                                 shiny::uiOutput(outputId = "corr_plot_button"),
+                                 
+                                 # Button: Pair Plot
+                                 shiny::uiOutput(outputId = "pair_plot_button")
                                  
                                ),
                                
                                # Main panel for displaying outputs
                                mainPanel(
                                  
-                                 # Output: Pair Plots
-                                 plotOutput(outputId = "pair_plot")
+                                 # Output: Plots
+                                 plotOutput(outputId = "plots")
                                  
                                )
                              )
