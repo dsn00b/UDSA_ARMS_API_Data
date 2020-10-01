@@ -1,9 +1,9 @@
-#' @import shiny
-#' @import dplyr
-#' @import data.table
-#' @import stringr
-#' @import GGally
-#' @import magrittr
+require(shiny)
+require(dplyr)
+require(data.table)
+require(stringr)
+require(GGally) 
+require(magrittr)
 
 server <- function(input, output) {
   

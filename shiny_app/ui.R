@@ -1,4 +1,4 @@
-#' @import shiny
+require(shiny)
 
 ui <- shiny::fluidPage(
   
