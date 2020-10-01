@@ -70,7 +70,7 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
     data <- parsed_get_object$data
     data$var_rep <- paste0(data$variable_id, " (", data$report, ")") # disambiguate variable-report relationship
     data <- data[!is.na(data$estimate), ] # remove NAs
-    data <- data[(!variable_is_invalid & unreliable_estimate == 0), ] # remove invalid data
+    data <- data[(!data$variable_is_invalid & data$unreliable_estimate == 0), ] # remove invalid data
     
     return(data)
     
