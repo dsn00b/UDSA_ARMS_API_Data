@@ -3,6 +3,17 @@
 #' @export
 
 pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all") {
+  year=as.numeric(year)
+  stopifnot(all(!(is.na(year))))
+  
+  stopifnot(all(is.character(report),is.character(state),is.character(variable)))
+  
+  if(is.numeric(farmtype)){
+    stopifnot(all(((farmtype%%1)==0),(farmtype<3),(farmtype>-1)))
+  }else{
+    stopifnot(is.character(farmtype))
+  }
+  
   
   # initialise basic variables
   
