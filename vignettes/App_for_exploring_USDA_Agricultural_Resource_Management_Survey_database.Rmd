@@ -1,0 +1,19 @@
+---
+title: "App_for_exploring_USDA_ARMS_database"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{App_for_exploring_USDA_ARMS_database}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(usda.arms.api)
+```
