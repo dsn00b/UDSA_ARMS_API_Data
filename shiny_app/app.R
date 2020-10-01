@@ -107,6 +107,14 @@ ui <- shiny::fluidPage(
           
         )
       )
+    ),
+    
+    # Add Pulled Data Tab
+    tabPanel("Pulled Data",
+             
+      # Output: Table
+      tableOutput(outputID = "pulled_data")
+    
     )
   )
 )
@@ -146,10 +154,9 @@ server <- function(input, output) {
     output$variables_from_data <- shiny::renderUI({
       shiny::selectInput(inputId = "variables_visualisation",
                          label = "Select Variable(s) to Visualise",
-                         choices = list(c("All", unique(sliced_data[, var_rep]))),
+                         choices = list(unique(sliced_data[, var_rep])),
                          multiple = TRUE,
-                         selectize = FALSE,
-                         selected = "All")
+                         selectize = FALSE)
     })
     
     # create remaining functionality in the 'Visualisation' tab, based on user input
@@ -162,17 +169,9 @@ server <- function(input, output) {
                            "variable_group_id", "variable_unit", "variable_description",
                            "variable_is_invalid", "median", "statistic", "rse",
                            "unreliable_estimate", "decimal_display")
-      
-      if ("All" %in% input$variables_visualisation) {
-        
-        sliced_data <<- pulled_data[, !(colnames(pulled_data) %in% (exclude_columns))]
-        
-      } else {
-        
-        sliced_data <<- pulled_data[pulled_data$report %in% input$variables_visualisation, 
-                                    !(colnames(pulled_data) %in% (exclude_columns))]
-        
-      }
+
+      sliced_data <<- pulled_data[pulled_data$report %in% input$variables_visualisation, 
+                                  !(colnames(pulled_data) %in% (exclude_columns))]
       
       # populate 'analysis variable' radio button
       output$analysis_variable <- shiny::renderUI({
@@ -180,7 +179,8 @@ server <- function(input, output) {
         shiny::radioButtons(inputId = "analysis_variable_selected",
                             label = "Select an Analysis Variable",
                             choices = list(c("Year", "State", "Farm Type", "Category", "None")),
-                            inline = TRUE)
+                            inline = TRUE,
+                            selected = "None")
         
       })
       
@@ -190,8 +190,7 @@ server <- function(input, output) {
                            label = "Filter by Year(s)",
                            choices = as.list(unique(sliced_data$year)),
                            multiple = TRUE,
-                           selectize = FALSE,
-                           selected = "All")
+                           selectize = FALSE)
       })
 
       # populate 'states' drop-down
