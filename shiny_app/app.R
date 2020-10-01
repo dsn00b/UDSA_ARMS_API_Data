@@ -1,4 +1,5 @@
 #' @import shiny
+#' @import dplyr
 
 ui <- shiny::fluidPage(
   
@@ -78,9 +79,6 @@ ui <- shiny::fluidPage(
           # Input: Multi-Select Drop-down Box for 'year'
           shiny::uiOutput(outputId = "years_from_data"),
           
-          # Input: Multi-Select Drop-down Box for 'report'
-          shiny::uiOutput(outputId = "reports_from_data"),
-          
           # Input: Multi-Select Drop-down Box for 'variable'
           shiny::uiOutput(outputId = "variables_from_data"),  
           
@@ -143,109 +141,92 @@ server <- function(input, output) {
     }
     
     ### cover functionality in "Visualise" tab
-    
-    # populate 'years' widget
-    output$years_from_data <- shiny::renderUI({
-      shiny::selectInput(inputId = "years_visualisation",
-                         label = "Year(s)",
-                         choices = as.list(c("All", unique(pulled_data$year))),
-                         multiple = TRUE,
-                         selectize = FALSE,
-                         selected = "All")
-    })
-    
-    # populate 'reports' widget
-    output$reports_from_data <- shiny::renderUI({
-      shiny::selectInput(inputId = "reports_visualisation",
-                         label = "Report(s)",
-                         choices = as.list(c("All", unique(pulled_data$report))),
+ 
+    # populate 'variables' widget
+    output$variables_from_data <- shiny::renderUI({
+      shiny::selectInput(inputId = "variables_visualisation",
+                         label = "Select Variable(s) to Visualise",
+                         choices = list(c("All", unique(sliced_data[, var_rep]))),
                          multiple = TRUE,
                          selectize = FALSE,
                          selected = "All")
     })
     
     # create remaining functionality in the 'Visualisation' tab, based on user input
-    shiny::observeEvent(input$years_visualisation || input$reports_visualisation, {
+    shiny::observeEvent(input$variables_visualisation, {
       
-      # populate 'variables' drop down
-      output$variables_from_data <- shiny::renderUI({
+      # subset data
+      
+      exclude_columns <- c("category2", "category2_value", "variable_id", "variable_name",
+                           "variable_sequence", "variable_level", "variable_group",
+                           "variable_group_id", "variable_unit", "variable_description",
+                           "variable_is_invalid", "median", "statistic", "rse",
+                           "unreliable_estimate", "decimal_display")
+      
+      if ("All" %in% input$variables_visualisation) {
         
-        if (!("All" %in% input$years_visualisation) & !("All" %in% input$reports_visualisation)) {
-          
-          sliced_data <<- pulled_data[(pulled_data$year %in% input$years_visualisation & 
-                                         pulled_data$report %in% input$reports_visualisation), ]
-          
-        } else if ("All" %in% input$reports_visualisation) {
-          
-          sliced_data <<- pulled_data[pulled_data$year %in% input$years_visualisation, ]
-          
-        } else if ("All" %in% input$years_visualisation) {
-          
-          sliced_data <<- pulled_data[pulled_data$report %in% input$reports_visualisation, ]
-          
-        } else {
-          
-          sliced_data <<- pulled_data
-          
-        }
+        sliced_data <<- pulled_data[, !(colnames(pulled_data) %in% (exclude_columns))]
         
-        shiny::selectInput(inputId = "variables_visualisation",
-                           label = "Select Variable(s) to Visualise",
-                           choices = list(c("All", unique(sliced_data[, var_rep]))),
-                           multiple = TRUE,
-                           selectize = FALSE,
-                           selected = "All")
-      })
+      } else {
+        
+        sliced_data <<- pulled_data[pulled_data$report %in% input$variables_visualisation, 
+                                    !(colnames(pulled_data) %in% (exclude_columns))]
+        
+      }
       
       # populate 'analysis variable' radio button
-      
-      if (!("All" %in% input$variables_visualisation)) {sliced_data <<- sliced_data[, ]}
-      
       output$analysis_variable <- shiny::renderUI({
         
         shiny::radioButtons(inputId = "analysis_variable_selected",
                             label = "Select an Analysis Variable",
-                            choices = list(c("State", "Farm Type", "Category", "None")),
+                            choices = list(c("Year", "State", "Farm Type", "Category", "None")),
                             inline = TRUE)
+        
+      })
+      
+      # populate 'years' widget
+      output$years_from_data <- shiny::renderUI({
+        shiny::selectInput(inputId = "years_visualisation",
+                           label = "Filter by Year(s)",
+                           choices = as.list(unique(sliced_data$year)),
+                           multiple = TRUE,
+                           selectize = FALSE,
+                           selected = "All")
+      })
+
+      # populate 'states' drop-down
+      output$states_from_data <- shiny::renderUI({
+        
+        shiny::selectInput(inputId = "states_visualisation",
+                           label = "Filter by State(s)",
+                           choices = list(unique(sliced_data$state)),
+                           multiple = TRUE)
+        
+      })
+      
+      # populate 'farmtype' drop-down
+      output$farmtypes_from_data <- shiny::renderUI({
+        
+        shiny::selectInput(inputId = "farmtype_visualisation",
+                           label = "Select Farm Type(s) to Drill Down into",
+                           choices = list(unique(sliced_data[, farmtype])),
+                           selected = "All Farms")
+        
+      })
+      
+      # populate 'category' drop-down
+      output$categories_from_data <- shiny::renderUI({
+        
+        shiny::selectInput(inputId = "farmtype_visualisation",
+                           label = "Select Category to Drill Down into",
+                           choices = list(unique(sliced_data[, category])),
+                           selected = "All Farms")
         
       })
       
       ## populate other drop-downs on the basis of 'analysis variable' selected by the user
       
       shiny::observeEvent(input$analysis_variable_selected & input$variables_visualisation, {
-        
-        if (input$analysis_variable_selected == "None") {
-          
-          # populate 'state' drop-down
-          output$states_from_data <- shiny::renderUI({
-            
-            shiny::selectInput(inputId = "states_visualisation",
-                               label = "Select State(s) to Drill Down into",
-                               choices = list(unique(sliced_data[, state])),
-                               multiple = TRUE)
-            
-          })
-          
-          # populate 'farmtype' drop-down
-          output$farmtypes_from_data <- shiny::renderUI({
-            
-            shiny::selectInput(inputId = "farmtype_visualisation",
-                               label = "Select Farm Type(s) to Drill Down into",
-                               choices = list(unique(sliced_data[, farmtype])),
-                               multiple = TRUE)
-            
-          })
-          
-          # populate 'category' drop-down
-          output$categories_from_data <- shiny::renderUI({
-            
-            shiny::selectInput(inputId = "farmtype_visualisation",
-                               label = "Select Category to Drill Down into",
-                               choices = list(unique(sliced_data[, category])))
-            
-          })
-          
-        }
         
       })
       

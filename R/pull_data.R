@@ -16,10 +16,12 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   year <- paste(year, collapse = ",") # allow for multi-select in the Shiny app
   report <- gsub(" ", "+", tolower(paste(report, collapse = ","))) # allow for multi-select in the Shiny app
   state <- if ("all" %in% state) {"all"} else paste(state, collapse = ",")
-  farmtype <- if (farmtype == "Farm Operator Households") {1} else if (farmtype == "Farm Businesses") {2} else {1} # allow for single-select in the Shiny app
+  farmtype <- sapply(farmtype, 
+                     function(x) {if (x == "Farm Operator Households") {1} 
+                       else if (x == "Farm Businesses") {2} else {1}})  # allow for multi-select in the Shiny app
   variable_id <- 
     if ("all" %in% variable) {"all"} else 
-      {paste(unique(metadata$variables[metadata$variables$name %in% variable, "id"]), sep = ",")}  # allow for multi-select in the Shiny app; assumes that metadata list is available
+      {paste(unique(metadata$variables[metadata$variables$name %in% variable, "id"]), sep = ",")}  # filtering on variable not allowed on Shiny app due to inherent ambiguous relationship between 'variable' and 'report'; variable related code is still made available, just in case
   
   # formulate api call
   
@@ -39,7 +41,7 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
 
   parsed_get_object <- jsonlite::fromJSON(httr::content(httr::GET(URL), "text", encoding = "UTF-8"))
   
-  if ("error" %in% parsed_get_object) {
+  if ("error" %in% names(parsed_get_object)) {
     
     if (parsed_get_object$error$code == "OVER_RATE_LIMIT") {
       
@@ -53,8 +55,9 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   
   } else {
     
+    # get and clean the data
     data <- parsed_get_object$data
-    data$var_rep <- paste0(data$variable_id, " (", data$report, ")")
+    data$var_rep <- paste0(data$variable_id, " (", data$report, ")") # disambiguate variable-report relationship
     data <- data[!is.na(data$estimate), ] # remove NAs
     data <- data[(!variable_is_invalid & unreliable_estimate == 0), ] # remove invalid data
     
