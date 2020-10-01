@@ -3,6 +3,7 @@
 #' @import data.table
 #' @import stringr
 #' @import GGally
+#' @import magrittr
 
 server <- function(input, output) {
   
