@@ -15,13 +15,16 @@ server <- function(input, output) {
   shiny::observeEvent(input$pull_data, {
     
     # data pull
-    state <- if (length(input$state) > 0) {"all"} 
-    else {metadata$states[metadata$states$name %in% input$state, "code"]}
+    
+    state <- if (length(input$states) > 0) {
+      metadata$states[metadata$states$name %in% input$states, "code"]
+    } else {"all"}
     
     farmtype <- if (length(input$farmtype) > 0) {input$farmtype} else {"all"}
     
-    pulled_data <- pull_data(year = input$year, report = input$report, 
+    pulled_data <<- pull_data(year = input$year, report = input$report, 
                              state = state, farmtype = farmtype)
+    
     # render output message
     if (class(pulled_data) == "character") {
       

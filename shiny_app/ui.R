@@ -121,7 +121,7 @@ ui <- shiny::fluidPage(
                     tabPanel("Pulled Data",
                              
                              # Output: Table
-                             tableOutput(outputId = "pulled_data")
+                             dataTableOutput(outputId = "pulled_data")
                              
                     )
   )
