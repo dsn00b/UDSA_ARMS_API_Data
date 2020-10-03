@@ -1,5 +1,14 @@
 #' @import httr
 #' @import jsonlite
+#' 
+#' @title Pull Agricultural Survey data using the USDA ARMS API
+#' @param year A vector of years to filter data by
+#' @param report A vector of reports to fetch
+#' @param state A vector of states to filter data by
+#' @param farmtype A vector of farmtypes to filter data by
+#' @param variable A vector of variables to fetch
+#' @return A \code{data.frame} with survey data filtered according to 
+#' input arguments
 #' @export
 
 pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all") {
@@ -30,7 +39,7 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
                       "LA","ME","MD","MA","MI","MN","MS","MO","MT","NE",
                       "NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR",
                       "PA","RI","SC","SD","TN","TX","UT","VT","VA","WA",
-                      "WV","WI","WY")
+                      "WV","WI","WY", "ni") # Nebraska coded as 'ni' in the database
   stopifnot(all((tolower(state) %in% tolower(americanStates))))
   
   ## proceed with coding the actual function

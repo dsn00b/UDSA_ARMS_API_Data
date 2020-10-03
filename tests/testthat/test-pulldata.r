@@ -1,4 +1,4 @@
-context("pull data")
+context("pull_data")
 
 test_that("erroneous report name throws error", {
   

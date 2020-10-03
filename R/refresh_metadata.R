@@ -1,5 +1,8 @@
 #' @import httr
 #' @import jsonlite
+#' 
+#' @title Refresh metadata corresponding to the USDA ARMS API
+#' @return A \code{list} of metadata items
 #' @export
 
 refresh_metadata <- function() {
