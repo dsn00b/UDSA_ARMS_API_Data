@@ -24,7 +24,8 @@ ui <- shiny::fluidPage(
                                         
                                         # Input: Multi-Select Drop-down Box for 'year'
                                         shiny::selectInput(inputId = "year",
-                                                           label = "Years of Data to Pull (choose at least one)",
+                                                           label = "Years of Data to Pull 
+                                                           (choose at least one)",
                                                            choices = as.list(metadata$years),
                                                            selected = metadata$years[1],
                                                            multiple = TRUE,
@@ -32,7 +33,8 @@ ui <- shiny::fluidPage(
                                         
                                         # Input: Multi-Select Drop-down Box for 'report'
                                         shiny::selectInput(inputId = "report",
-                                                           label = "Reports to Pull (choose at least one)",
+                                                           label = "Reports to Pull 
+                                                           (choose at least one)",
                                                            choices = as.list(metadata$reports),
                                                            selected = metadata$reports[1],
                                                            multiple = TRUE,
@@ -47,7 +49,8 @@ ui <- shiny::fluidPage(
                                         # Input: Multi-Select Drop-down Box for 'farmtype'
                                         shiny::selectInput(inputId = "farmtype",
                                                            label = "Farmtype Filter",
-                                                           choices = as.list(metadata$farmtypes$name),
+                                                           choices = 
+                                                             as.list(metadata$farmtypes$name),
                                                            multiple = TRUE),      
                                         
                                         # Button: Pull Data
