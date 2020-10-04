@@ -20,16 +20,15 @@ library(usda.arms.api)
 
 ```
 
+## Quick overview of the data and the API
 
+The Department of Agriculture of the USA has made the data from its Annual Resource Management Survey accessible through an API. The survey has contains data on farm companies and families finances and resource utilization. The data is organized by state and year.
 
-[add a table to illustrate the dataset]
-
-
-
+## pull_data()
 
 The function pull_data() takes 5 arguments: year, report type, state, farm type and variable. State, farm type and variable have default values of, respectively, "all [states]", "all farm types" and "all [variables]". 
 
-There are more granular subcategories; these have not been included as arguments as they are not conceptually independent of their supercategories. 
+There are more granular subcategories in the API; these are not included as filtering options in the pull_data()-function, but they are available as visualization options in the Shiny app.
 
 ```{r}
 
@@ -38,7 +37,10 @@ apiCall1[1,c(1:10,18)]
 
 ```
 
-We need metadata (specifically all the possible values of the 5 above-mentioned categories) in order to populate the drop-down menus in the control interface of the shiny app as well as for some internal use in the pull_data()-function. The refresh_metadata()-function downloads this information for us. While it is called automatically when the package is loaded, it can also be called in the shiny app by way of pressing the "update metadata"-button.
+
+## refresh_metadata()
+
+We need metadata (specifically all the possible values of the 5 above-mentioned categories as well as their subcategories) in order to populate the drop-down menus in the control interfaces of the shiny app as well as for some internal uses in the pull_data()-function. The refresh_metadata()-function downloads this information for us. While it is called automatically when the package is loaded, it can also be called in the shiny app by way of pressing the "update metadata"-button.
 
 refresh_metadata() takes no arguments.
 
@@ -52,14 +54,13 @@ metadata <- refresh_metadata()
 
 
 
-
 ```{r, echo = FALSE}
 
 ##attempt at in-browser display for the shiny app. Get back to it later, maybe?
 
 #shinyDirectory=paste0(dirname(getwd()),"/shiny_app/")
 
-#knitr::include_app(shinyDirectory)
+#knitr::include_app("http://127.0.0.1:5806")
 
 ```
 
