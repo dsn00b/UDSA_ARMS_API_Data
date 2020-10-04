@@ -9,3 +9,10 @@ test_that("function works correctly", {
   rm("test_meta")
   
 })
+
+test_that("The object 'metadata' exists (usually because refresh-metadata was called on load)", {
+  #probably only useful right after build
+  
+  testfunc <- function(x){return(attributes(x))}
+  expect_error( testfunc(metadata), NA )
+})
