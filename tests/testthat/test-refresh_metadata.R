@@ -10,11 +10,9 @@ test_that("function works correctly", {
   
 })
 
-### commenting below as package solves for metadata non-availability upon loading
-
-#test_that("The object 'metadata' exists (usually because refresh-metadata was called on load)", {
+test_that("The object 'metadata' exists (usually because refresh-metadata was called on load)", {
   #probably only useful right after build
   
-#  testfunc <- function(x){return(attributes(x))}
-#  expect_error(testfunc(metadata), NA )
-#})
+  testfunc <- function(x){return(attributes(x))}
+  expect_error(testfunc(usda.arms.api.env$metadata), NA )
+})
