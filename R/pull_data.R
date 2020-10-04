@@ -56,9 +56,9 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   year <- paste(year, collapse = ",") # allow for multi-select in the Shiny app
   report <- gsub(" ", "+", tolower(paste(report, collapse = ","))) # allow for multi-select in the Shiny app
   state <- if ("all" %in% state) {"all"} else paste(state, collapse = ",")
-  farmtype <- sapply(farmtype, 
-                     function(x) {if (x == "Farm Operator Households") {1} 
-                       else if (x == "Farm Businesses") {2} else {1}})  # allow for multi-select in the Shiny app
+  farmtype <- paste(sapply(farmtype, 
+                     function(x) {if (x == "Farm Operator Households") {3} 
+                       else if (x == "Farm Businesses") {2} else {1}}), collapse = ",")  # allow for multi-select in the Shiny app
   variable_id <- 
     if ("all" %in% variable) {"all"} else 
       {paste(unique(metadata$variables[metadata$variables$name %in% variable, "id"]), sep = ",")}  # filtering on variable not allowed on Shiny app due to inherent ambiguous relationship between 'variable' and 'report'; variable related code is still made available, just in case

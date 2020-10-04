@@ -1,7 +1,8 @@
 .onLoad <- function(libname, pkgname) {
-  metadata <<- refresh_metadata()
+  usda.arms.api.env <<- new.env()
+  usda.arms.api.env$metadata <<- refresh_metadata()
 }
 
 .onUnload <- function(libname, pkgname) {
-  rm("metadata", pos = 1)
+  rm("usda.arms.api.env", pos = 1)
 }

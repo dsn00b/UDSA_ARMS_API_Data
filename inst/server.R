@@ -7,327 +7,536 @@ require(magrittr)
 
 server <- function(input, output) {
   
-  ### cover functionality in "Pull Data" tab
+  ### 1. Set up "Get Data" tab
   
-  # refresh metadata
-  shiny::observeEvent(input$refresh_metadata, {metadata <<- refresh_metadata()})
+  ## 1.1. check if metadata exists, if not, get it populated
+  if (!exists("usda.arms.api.env")) {usda.arms.api.env <<- new.env()}
   
-  # pull data based on user selection and render an output message
+  if(!exists("metadata", envir = usda.arms.api.env)) {
+    
+    usda.arms.api.env$metadata <<- refresh_metadata()
+  
+  }
+  
+  ## 1.2. populate widgets on 'Pull Data' tab
+  
+  # 1.2.1. 'year' widget
+  output$year_pull_data <- renderUI({
+
+    shiny::selectInput(inputId = "year",
+       label = "Years of Data to Pull (choose at least one)",
+       choices = as.list(usda.arms.api.env$metadata$years),
+       selected = usda.arms.api.env$metadata$years[1],
+       multiple = TRUE,
+       selectize = FALSE)
+    
+  })
+  
+  # 1.2.2. 'report' widget
+  output$year_pull_data <- renderUI({
+    
+    shiny::selectInput(inputId = "report",
+       label = "Reports to Pull (choose at least one)",
+       choices = as.list(usda.arms.api.env$metadata$reports),
+       selected = usda.arms.api.env$metadata$reports[1],
+       multiple = TRUE,
+       selectize = FALSE)
+    
+  })
+  
+  # 1.2.3. 'states' widget
+  output$states_pull_data <- renderUI({
+    
+    shiny::selectInput(inputId = "states",
+       label = "States Filter",
+       choices = as.list(usda.arms.api.env$metadata$states$name),
+       multiple = TRUE)
+    
+  })
+  
+  # 1.2.4. 'farmtype' widget
+  output$farmtype_pull_data <- renderUI({
+    
+    shiny::selectInput(inputId = "farmtype",
+       label = "Farmtype Filter",
+       choices = as.list(usda.arms.api.env$metadata$farmtypes$name),
+       multiple = TRUE)
+    
+  })
+  
+  # 1.2.5. refresh metadata button
+  shiny::observeEvent(input$refresh_metadata, {
+    
+    usda.arms.api.env$metadata <<- refresh_metadata()
+  
+  })
+  
+  ## 1.3. events triggered by pull data button 
   shiny::observeEvent(input$pull_data, {
     
-    # re-set global variable flags
-    pair_plot_flag <<- FALSE
-    corr_plot_flag <<- FALSE
+    # 1.3.1 (re)-initialise app-level variables
+    if ("pulled_data" %in% ls(usda.arms.api.env)) {
+      
+      rm("pulled_data", envir = usda.arms.api.env)
     
-    # data pull
+    }
+    
+    # 1.3.2. stage the data pull
     state <- if (length(input$states) > 0) {
-      metadata$states[metadata$states$name %in% input$states, "code"]
+      
+      usda.arms.api.env$metadata$states[
+        usda.arms.api.env$metadata$states$name %in% input$states, "code"]
+    
     } else {"all"}
     
     farmtype <- if (length(input$farmtype) > 0) {input$farmtype} else {"all"}
     
-    pulled_data <<- pull_data(year = input$year, report = input$report, 
-                             state = state, farmtype = farmtype)
+    usda.arms.api.env$pulled_data <<- pull_data(year = input$year,
+        report = input$report, state = state, farmtype = farmtype)
     
-    # render output message
-    if (class(pulled_data) == "character") {
+    # 1.3.3. handle data pull success / failure
+    if (class(usda.arms.api.env$pulled_data) == "character") { # failure
       
-      output$data_pull <- shiny::renderText(pulled_data)
+      # 1.3.3.1. display error message
+      shiny::showModal(modalDialog(title = "Error Message", pulled_data))
       
-    } else {
+      # 1.3.3.2. invalidate all widgets on the 'visualise' and 'pulled data' tab
+      output$variables_from_data <- shiny::renderText("")
+      output$years_from_data <- shiny::renderText("")
+      output$states_from_data <- shiny::renderText("")
+      output$farmtypes_from_data <- shiny::renderText("")
+      output$categories_from_data <- shiny::renderText("")
+      output$cat_vals_from_data <- shiny::renderText("")
+      output$avg_by_vars <- shiny::renderText("")
+      output$note <- shiny::renderText("")
+      output$analysis_variable <- shiny::renderText("")
+      output$corr_plot_button <- shiny::renderText("")
+      output$pair_plot_button <- shiny::renderText("")
+      output$plots <- shiny::renderText("")
+      output$pulled_data <- shiny::renderText("")
       
-      output$data_pull <- shiny::renderText("API Data loaded for Visualisation")
+    } else { # success
+      
+      # 1.3.3.3. set up 'visualise' tab
+      
+      # 1.3.3.3.1. populate "Variables" widget
+      output$variables_from_data <- shiny::renderUI({
+        
+        shiny::selectInput(inputId = "variables_visualisation",
+           label = "Select Variable(s) to Visualise",
+           choices = as.list(unique(usda.arms.api.env$pulled_data$var_rep)),
+           multiple = TRUE,
+           selectize = FALSE)
+        
+      })
+      
+      # 1.3.3.3.2. invalidate all other widgets on the tab
+      output$years_from_data <- shiny::renderText("")
+      output$states_from_data <- shiny::renderText("")
+      output$farmtypes_from_data <- shiny::renderText("")
+      output$categories_from_data <- shiny::renderText("")
+      output$cat_vals_from_data <- shiny::renderText("")
+      output$avg_by_vars <- shiny::renderText("")
+      output$note <- shiny::renderText("")
+      output$analysis_variable <- shiny::renderText("")
+      output$corr_plot_button <- shiny::renderText("")
+      output$pair_plot_button <- shiny::renderText("")
+      
+      # 1.3.3.4. set up 'pulled data' tab
+      output$pulled_data <- shiny::renderDataTable(usda.arms.api.env$pulled_data)
+      
+      # 1.3.3.5. show user success message
+      shiny::showModal(modalDialog(
+        title = "Success!", 
+        "API Data loaded for Visualisation. See the 'Visualise' tab or 
+        for some options to visually explore data variables (OR) view/download
+        the loaded API data on the 'Pulled Data' tab"))
       
     }
     
-    ### populate raw data in the "Pulled Data" tab
+  })
+  
+  ### 2. Set up "Visualise" tab
+  shiny::observeEvent(input$variables_visualisation, {
     
-    output$pulled_data <- shiny::renderDataTable(pulled_data)
+    # 2.1. cull down a copy of pulled_data for leaner operations downstream
+    exclude_columns <- c("category2", "category2_value", "variable_id",
+      "variable_name", "variable_sequence", "variable_level", "variable_group",
+      "variable_group_id", "variable_unit", "variable_description",
+      "variable_is_invalid", "median", "statistic", "rse", "unreliable_estimate",
+      "decimal_display", "report")
     
-    ### cover functionality in "Visualise" tab
+    usda.arms.api.env$sliced_data <<- usda.arms.api.env$pulled_data[
+      usda.arms.api.env$pulled_data$var_rep %in% input$variables_visualisation, 
+      !(colnames(usda.arms.api.env$pulled_data) %in% (exclude_columns))]
     
-    # populate 'variables' widget
-    output$variables_from_data <- shiny::renderUI({
-      shiny::selectInput(inputId = "variables_visualisation",
-                         label = "Select Variable(s) to Visualise",
-                         choices = as.list(unique(pulled_data[, "var_rep"])),
-                         multiple = TRUE,
-                         selectize = FALSE)
+    usda.arms.api.env$sliced_data <<- data.table::dcast(
+      data.table::as.data.table(usda.arms.api.env$sliced_data),
+      year + state + farmtype + category + category_value ~ var_rep, 
+      value.var = "estimate")
+    
+    # 2.2. set up the drop-down widgets and plot buttons
+    
+    # 2.2.1. 'years_from_data' drop-down
+    output$years_from_data <- shiny::renderUI({
+      
+      shiny::selectInput(inputId = "years_visualisation",
+         label = "Filter by Year(s)",
+         choices = as.list(unique(usda.arms.api.env$sliced_data$year)),
+         multiple = TRUE)
     })
     
-    # create remaining functionality in the 'Visualisation' tab, based on user input
-    shiny::observeEvent(input$variables_visualisation, {
+    # 2.2.2. 'states_from_data' drop-down
+    output$states_from_data <- shiny::renderUI({
       
-      # re-set global variable flags
-      pair_plot_flag <<- FALSE
-      corr_plot_flag <<- FALSE
+      shiny::selectInput(inputId = "states_visualisation",
+         label = "Filter by State(s)",
+         choices = as.list(unique(usda.arms.api.env$sliced_data$state)),
+         multiple = TRUE)
+    })
+    
+    # 2.2.3. 'farmtypes_from_data' drop-down
+    output$farmtypes_from_data <- shiny::renderUI({
       
-      # process data
-      exclude_columns <- c("category2", "category2_value", "variable_id", "variable_name",
-                           "variable_sequence", "variable_level", "variable_group",
-                           "variable_group_id", "variable_unit", "variable_description",
-                           "variable_is_invalid", "median", "statistic", "rse",
-                           "unreliable_estimate", "decimal_display", "report")
+      shiny::selectInput(inputId = "farmtype_visualisation",
+         label = "Filter by Farm Type(s)",
+         choices = as.list(unique(usda.arms.api.env$sliced_data$farmtype)),
+         multiple = TRUE)
+    })   
+    
+    # 2.2.4. 'categories_from_data' drop-down
+    output$categories_from_data <- shiny::renderUI({
       
-      sliced_data <<- pulled_data[pulled_data$var_rep %in% input$variables_visualisation, 
-                                 !(colnames(pulled_data) %in% (exclude_columns))]
+      shiny::selectInput(inputId = "category_visualisation",
+         label = "Filter by Category",
+         choices = as.list(unique(usda.arms.api.env$sliced_data$category)),
+         selected = unique(usda.arms.api.env$sliced_data$category)[1])
+    })    
+    
+    # 2.2.5. 'cat_vals_from_data' drop-down
+    shiny::observeEvent(input$category_visualisation, {
       
-      sliced_data <<- data.table::dcast(data.table::as.data.table(sliced_data),
-                                       year + state + farmtype + category + category_value ~ var_rep,
-                                       value.var = "estimate")
+      cat_val_list <- as.list(unique(usda.arms.api.env$sliced_data[
+        usda.arms.api.env$sliced_data$category == 
+        input$category_visualisation, "category_value"]))
       
-      # populate 'avg_by_vars' check box group
-      output$avg_by_vars <- shiny::renderUI({
+      if (length(cat_val_list[[1]]) == 1) {
         
-        shiny::checkboxGroupInput(inputId = "avg_by_vars_visualisation",
-                                  label = "Select one or more fields to Average Variables by
-                                  (leave all unselected if you don't want to average the variables)",
-                                  choiceNames = as.list(c("Year", "State", "Farm Type", "Category")),
-                                  choiceValues = 
-                                    as.list(c("year", "state", "farmtype", "category_value")),
-                                  inline = TRUE)
+        names(cat_val_list) <- cat_val_list[[1]]
+        
+      }
+      
+      output$cat_vals_from_data <- shiny::renderUI({
+        
+        shiny::selectInput(inputId = "cat_vals_visualisation",
+           label = "Filter by Sub Category(ies)",
+           choices = cat_val_list,
+           multiple = TRUE)             
         
       })
       
-      # populate 'analysis variable' radio button
-      shiny::observeEvent(input$avg_by_vars_visualisation, {
-        
-        output$analysis_variable <- shiny::renderUI({
-          
-          var_names <- gsub("category_value", "Category", input$avg_by_vars_visualisation)
-          var_names <- stringr::str_to_title(var_names)
-          
-          shiny::selectInput(inputId = "analysis_variable_visualisation",
-                             label = "Select upto one Analysis Variable",
-                             choiceNames = as.list(var_names),
-                             choiceValues = as.list(input$avg_by_vars_visualisation),
-                             inline = TRUE)
-          
-        })
-        
-      })
+    })
+    
+    # 2.2.6. 'average by variables' check-box
+    output$avg_by_vars <- shiny::renderUI({
       
-      # populate 'years' widget
-      output$years_from_data <- shiny::renderUI({
-        
-        shiny::selectInput(inputId = "years_visualisation",
-                           label = "Filter by Year(s)",
-                           choices = as.list(unique(sliced_data$year)),
-                           multiple = TRUE)
-      })
+      shiny::checkboxGroupInput(inputId = "avg_by_vars_visualisation",
+          label = "Select one or more fields to Average Variables by (leave 
+          all unselected if you don't want to average the variables)",
+          choiceNames = as.list(c("Year", "State", "Farm Type", "Category")),
+          choiceValues =  as.list(c("year", "state", "farmtype", "category_value")),
+          inline = TRUE)
       
-      # populate 'states' drop-down
-      output$states_from_data <- shiny::renderUI({
-        
-        shiny::selectInput(inputId = "states_visualisation",
-                           label = "Filter by State(s)",
-                           choices = as.list(unique(sliced_data$state)),
-                           multiple = TRUE)
-        
-      })
+    })
+    
+    # 2.2.7. 'note'
+    output$note <- shiny::renderText("Note: If any filters are to be applied, 
+      they will be done before any aggregation is done (if at all)")
+    
+    # 2.2.8. 'analysis_variable' drop-down
+    shiny::observeEvent(input$avg_by_vars_visualisation, {
       
-      # populate 'farmtype' drop-down
-      output$farmtypes_from_data <- shiny::renderUI({
+      if (length(input$avg_by_vars_visualisation) > 0) {
         
-        shiny::selectInput(inputId = "farmtype_visualisation",
-                           label = "Filter by Farm Type(s)",
-                           choices = as.list(unique(sliced_data$farmtype)))
+        possible_an_var <- vector()
         
-      })
-      
-      # populate 'category' drop-down
-      output$categories_from_data <- shiny::renderUI({
-        
-        shiny::selectInput(inputId = "category_visualisation",
-                           label = "Filter by Category",
-                           choices = as.list(unique(sliced_data$category)),
-                           selected = "All Farms")
-        
-      })
-      
-      # populate 'category_value' drop-down
-      shiny::observeEvent(input$category_visualisation, {
-        
-        output$cat_vals_from_data <- shiny::renderUI({
+        for (i in input$avg_by_vars_visualisation) {
           
-          shiny::selectInput(inputId = "cat_vals_visualisation",
-                             label = "Filter by Sub Category(ies)",
-                             choices = as.list(unique(
-                               sliced_data[sliced_data$category == input$category_visualisation,
-                                           "category_value"])),
-                             multiple = TRUE)             
-          
-        })
-     
-      })
-      
-      # add note
-      output$note <- shiny::renderText("Note: If any filters are to be applied, they will be done
-                                       before any aggregation is done (if at all)")
-      
-      # show corr_plot_button
-      output$corr_plot_button <- shiny::renderUI({
-        
-        shiny::actionButton(inputId = "corr_plot_clicked", label = "Generate Correlation Plots")
-        
-      })
-      
-      # show pair_plot_button
-      output$pair_plot_button <- shiny::renderUI({
-        
-        shiny::actionButton(inputId = "pair_plot_clicked", label = "Generate Pair Plots")
-        
-      })
-      
-      # process data and plot graphs if pair_plot_button is clicked
-      shiny::observeEvent(input$pair_plot_clicked, {
-        
-        # process data if needed
-        
-        if (!(pair_plot_flag || corr_plot_flag)) {
-          
-          # filter by category      
-          plot_data <<- sliced_data[sliced_data$category == input$category_visualisation, ] # filter by category
-          
-          # filter by year
-          if (length(input$years_visualisation) > 0) {
+          if (length(as.vector(unique(usda.arms.api.env$sliced_data[, i]))) > 1) {
             
-            plot_data <<- plot_data[plot_data$year %in% input$years_visualisation, ]
-            
-          }
-          
-          # filter by state
-          if (length(input$states_visualisation) > 0) {
-            
-            plot_data <<- plot_data[plot_data$state %in% input$states_visualisation, ]
-            
-          }
-          
-          # filter by farmtype
-          if (length(input$farmtype_visualisation) > 0) {
-            
-            plot_data <<- plot_data[plot_data$farmtype %in% input$farmtype_visualisation, ]
-            
-          }
-          
-          # filter by category_value
-          if (length(input$cat_vals_visualisation) > 0) {
-            
-            plot_data <<- plot_data[plot_data$category_value %in% input$cat_vals_visualisation, ]
-            
-          }
-          
-          # trim and aggregate data
-          plot_data <<- plot_data %>% 
-            dplyr::select(c(input$avg_by_vars_visualisation, input$variables_visualisation))
-          
-          if (length(input$avg_by_vars_visualisation) > 0) {
-            
-            plot_data <<- plot_data %>% 
-              dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
-              dplyr::summarise_at(input$variables_visualisation, mean)
+            possible_an_var <- c(possible_an_var, i)
             
           }
           
         }
         
-        # set global variable
+        if (length(possible_an_var) > 0) {
+          
+          var_names <- gsub("category_value", "Category", possible_an_var)
+          var_names <- stringr::str_to_title(var_names)
+          
+          output$analysis_variable <- shiny::renderUI({
+            
+            shiny::radioButtons(inputId = "analysis_variable_visualisation",
+              label = "Select upto one Analysis Variable",
+              choiceNames = as.list(c(var_names, "None")),
+              choiceValues = as.list(c(possible_an_var, "None")),
+              selected = "None",
+              inline = TRUE)
+            
+          })
+
+        } else {
+          
+          output$analysis_variable <- shiny::renderText("")
+          
+        }
         
-        corr_plot_flag <<- TRUE
+      } else {
         
-        # plot
+        output$analysis_variable <- shiny::renderText("")
+        
+      }
+      
+    })
+    
+    # 2.2.9. 'corr_plot_button'
+    output$corr_plot_button <- shiny::renderUI({
+      
+      shiny::actionButton(inputId = "corr_plot_clicked", 
+        label = "Generate Correlation Plots")
+      
+    })
+    
+    # 2.2.10. 'corr_plot_button'
+    output$pair_plot_button <- shiny::renderUI({
+      
+      shiny::actionButton(inputId = "pair_plot_clicked",
+        label = "Generate Pair Plots")
+      
+    })
+    
+    # 2.3. set up plots
+    
+    # 2.3.1. generate plot for corr plot button click
+    shiny::observeEvent(input$corr_plot_clicked, {
+      
+      # 2.3.1.1. cull down a copy of sliced_data for leaner operations downstream
+      
+      # 2.3.1.1.1. filter by category, because one (and only one) category must be selected
+      usda.arms.api.env$plot_data <<- usda.arms.api.env$sliced_data[
+        usda.arms.api.env$sliced_data$category == input$category_visualisation, ]
+      
+      # 2.3.1.1.2. filter by year
+      if (nrow(usda.arms.api.env$plot_data) > 0 & 
+          length(input$years_visualisation) > 0) {
+        
+        usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
+          usda.arms.api.env$plot_data$year %in% input$years_visualisation, ]
+        
+      }
+      
+      # 2.3.1.1.3. filter by state
+      if (nrow(usda.arms.api.env$plot_data) > 0 &
+           length(input$states_visualisation) > 0) {
+        
+        usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
+          usda.arms.api.env$plot_data$state %in% input$states_visualisation, ]
+        
+      }
+      
+      # 2.3.1.1.4. filter by farmtype
+      if (nrow(usda.arms.api.env$plot_data) > 0 &
+           length(input$farmtype_visualisation) > 0) {
+        
+        usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
+          usda.arms.api.env$plot_data$farmtype %in% input$farmtype_visualisation, ]
+        
+      }
+      
+      # 2.3.1.1.5. filter by category_value
+      if (nrow(usda.arms.api.env$plot_data) > 0 &
+           length(input$cat_vals_visualisation) > 0) {
+        
+        usda.arms.api.env$plot_data <<- usda.arms.api.en$plot_data[
+          usda.arms.api.env$plot_data$category_value %in% 
+          input$cat_vals_visualisation, ]
+        
+      }
+      
+      # 2.3.1.1.6. trim further to only keep variables and avg_by_vars (if any) & aggregate (if needed)
+      if (nrow(usda.arms.api.env$plot_data) > 0) {
+        
+        if (length(input$avg_by_vars_visualisation) > 0) {
+          
+          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data %>% 
+            dplyr::select(c(input$avg_by_vars_visualisation, 
+            input$variables_visualisation)) %>% 
+            dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
+            dplyr::summarise_at(input$variables_visualisation, mean)
+          
+        }
+        
+        else {
+          
+          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data %>% 
+            dplyr::select(input$variables_visualisation)          
+        }
+        
+      }
+      
+      # 2.3.1.2. generate corr plot
+      if (nrow(usda.arms.api.env$plot_data) > 0) {
+      
+        output$plots <- shiny::renderPlot({
+          
+          GGally::ggcorr(subset(usda.arms.api.env$plot_data, 
+            select=input$variables_visualisation)) 
+          
+        })
+        
+      } else {
+        
+        output$plots <- shiny::renderText("Filters are too restrictive; 
+              relax one or more filters")
+        
+      }
+      
+    })
+    
+    # 2.3.2. plot for pair plot button click
+    shiny::observeEvent(input$pair_plot_clicked, {
+      
+      # 2.3.2.1. cull down a copy of sliced_data for leaner operations downstream
+      
+      # 2.3.2.1.1. filter by category, because one (and only one) category must be selected
+      usda.arms.api.env$plot_data <<- usda.arms.api.env$sliced_data[
+        usda.arms.api.env$sliced_data$category == input$category_visualisation, ]
+      
+      # 2.3.2.1.2. filter by year
+      if (nrow(usda.arms.api.env$plot_data) > 0 & 
+          length(input$years_visualisation) > 0) {
+        
+        usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
+          usda.arms.api.env$plot_data$year %in% input$years_visualisation, ]
+        
+      }
+      
+      # 2.3.2.1.3. filter by state
+      if (nrow(usda.arms.api.env$plot_data) > 0 &
+          length(input$states_visualisation) > 0) {
+        
+        usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
+          usda.arms.api.env$plot_data$state %in% input$states_visualisation, ]
+        
+      }
+      
+      # 2.3.2.1.4. filter by farmtype
+      if (nrow(usda.arms.api.env$plot_data) > 0 &
+          length(input$farmtype_visualisation) > 0) {
+        
+        usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
+          usda.arms.api.env$plot_data$farmtype %in% input$farmtype_visualisation, ]
+        
+      }
+      
+      # 2.3.2.1.5. filter by category_value
+      if (nrow(usda.arms.api.env$plot_data) > 0 &
+          length(input$cat_vals_visualisation) > 0) {
+        
+        usda.arms.api.env$plot_data <<- usda.arms.api.en$plot_data[
+          usda.arms.api.env$plot_data$category_value %in% 
+            input$cat_vals_visualisation, ]
+        
+      }
+      
+      # 2.3.2.1.6. trim further to only keep variables and avg_by_vars (if any) and aggregate data (if needed)
+      if (nrow(usda.arms.api.env$plot_data) > 0) {
+        
+        if (length(input$avg_by_vars_visualisation) > 0) {
+          
+          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data %>% 
+            dplyr::select(c(input$avg_by_vars_visualisation, 
+            input$variables_visualisation)) %>% 
+            dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
+            dplyr::summarise_at(input$variables_visualisation, mean)
+          
+        }
+        
+        else {
+          
+          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data %>% 
+            dplyr::select(input$variables_visualisation)          
+        }
+        
+      }
+      
+      # 2.3.2.2. generate pair plots
+      if (nrow(usda.arms.api.env$plot_data) > 0) {
         
         if (length(input$analysis_variable_visualisation) > 0) {
           
-          output$plots <- shiny::renderPlot({
+          if (input$analysis_variable_visualisation!= "None") {
             
-            GGally::ggpairs(subset(plot_data, select =  
-                        c(input$analysis_variable_visualisation, input$variables_visualisation)), 
-                        ggplot2::aes(colour=input$analysis_variable_visualisation)) 
+            output$plots <- shiny::renderPlot({
+              
+              GGally::ggpairs(subset(usda.arms.api.env$plot_data,
+                select = input$variables_visualisation), 
+                ggplot2::aes(colour=input$analysis_variable_visualisation)) 
+              
+            })
             
-          })
+          } else {
+            
+            output$plots <- shiny::renderPlot({
+              
+              GGally::ggpairs(subset(usda.arms.api.env$plot_data, 
+                select = input$variables_visualisation)) 
+              
+            })
+            
+          }
           
         } else {
           
           output$plots <- shiny::renderPlot({
             
-            GGally::ggpairs(subset(plot_data, select =  
-                        c(input$analysis_variable_visualisation, input$variables_visualisation))) 
+            GGally::ggpairs(subset(usda.arms.api.env$plot_data, 
+              select = input$variables_visualisation)) 
             
           })
           
         }
-
-      })
-      
-      # process data and plot graphs if pair_plot_button is clicked
-      shiny::observeEvent(input$corr_plot_clicked, {
         
-        # process data if needed
+      } else {
         
-        if (!(pair_plot_flag || corr_plot_flag)) {
-          
-          # filter by category      
-          plot_data <<- sliced_data[sliced_data$category == input$category_visualisation, ] # filter by category
-          
-          # filter by year
-          if (length(input$years_visualisation) > 0) {
-            
-            plot_data <<- plot_data[plot_data$year %in% input$years_visualisation, ]
-            
-          }
-          
-          # filter by state
-          if (length(input$states_visualisation) > 0) {
-            
-            plot_data <<- plot_data[plot_data$state %in% input$states_visualisation, ]
-            
-          }
-          
-          # filter by farmtype
-          if (length(input$farmtype_visualisation) > 0) {
-            
-            plot_data <<- plot_data[plot_data$farmtype %in% input$farmtype_visualisation, ]
-            
-          }
-          
-          # filter by category_value
-          if (length(input$cat_vals_visualisation) > 0) {
-            
-            plot_data <<- plot_data[plot_data$category_value %in% input$cat_vals_visualisation, ]
-            
-          }
-          
-          # trim and aggregate data
-          plot_data <<- plot_data %>% 
-            dplyr::select(c(input$avg_by_vars_visualisation, input$variables_visualisation))
-          
-          if (length(input$avg_by_vars_visualisation) > 0) {
-            
-            plot_data <<- plot_data %>% 
-              dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
-              dplyr::summarise_at(input$variables_visualisation, mean)
-            
-          }
-          
-        }
+        output$plots <- shiny::renderText("Filters are too restrictive; 
+          relax one or more filters")
         
-        # set global variable
-        
-        corr_plot_flag <<- TRUE
-        
-        # plot
-        
-        output$plots <- shiny::renderPlot({
-          
-          GGally::ggcorr(subset(plot_data, select=input$variables_visualisation)) 
-          
-        })
-        
-      })
+      }
       
     })
     
   })
   
+  ### 3. Set up "Pulled Data" tab
+  
+  # 3.1. 'download_csv' button
+  shiny::observeEvent(input$download_csv, {
+    
+    if ("pulled_data" %in% ls(usda.arms.api.env)) {
+      
+      write.csv(usda.arms.api.env$pulled_data, 
+        paste("download_", Sys.time(), ".csv"))
+      shiny::showModal(modalDialog(title = "Success", "Data Downloaded as CSV"))
+      
+    } else {
+      
+      shiny::showModal(modalDialog(title = "Error", "Get data using the 'Get Data'
+        tab before attempting to download API data in CSV format"))
+      
+    }
+
+  })
+
 }

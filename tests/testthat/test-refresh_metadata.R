@@ -6,5 +6,6 @@ test_that("function works correctly", {
   expect_equal(class(test_meta), "list")
   expect_equal(length(test_meta), 6)
   expect_equal(names(test_meta), c("years", "states", "reports", "farmtypes", "categories", "variables"))
+  rm("test_meta")
   
 })
