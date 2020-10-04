@@ -23,6 +23,10 @@ library(usda.arms.api)
 
 The Department of Agriculture of the USA has made the data from its Annual Resource Management Survey accessible through an API. The survey has contains data on farm companies and families finances and resource utilization. The data is organized by state and year.
 
+## The usda.arms.api-package
+
+The base functionality is confined to two functions: pull_data(), which makes a call to the API with the options specified in its arguments, and returns the response data, and refresh_metadata(), which collects all possible values for the five variables used as input for pull_data().
+
 ## pull_data()
 
 The function pull_data() takes 5 arguments: year, report type, state, farm type and variable. State, farm type and variable have default values of, respectively, "all [states]", "all farm types" and "all [variables]". 
@@ -35,6 +39,8 @@ apiCall1 <- pull_data(c(2015,2016,2017),"Farm Business Balance Sheet")
 apiCall1[1,c(1:10,18)]
 
 ```
+
+The API has a limit of a maximum of 1000 calls per hour; should the remaining calls in a given hour drop below 50, a warning will be thrown from the function.
 
 
 ## refresh_metadata()
