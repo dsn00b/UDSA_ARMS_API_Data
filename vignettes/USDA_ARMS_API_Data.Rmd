@@ -17,7 +17,6 @@ knitr::opts_chunk$set(
 ```{r setup}
 library(usda.arms.api)
 
-
 ```
 
 ## Quick overview of the data and the API
@@ -56,10 +55,11 @@ metadata <- refresh_metadata()
 
 ```{r, echo = FALSE}
 
-##attempt at in-browser display for the shiny app. Get back to it later, maybe?
+##attempt at an embedded display for the shiny app. Get back to it later, maybe?
 
 #shinyDirectory=paste0(dirname(getwd()),"/shiny_app/")
 
+##the following only works if the user is already running the shiny app on their machine
 #knitr::include_app("http://127.0.0.1:5806")
 
 ```
