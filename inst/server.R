@@ -418,8 +418,8 @@ server <- function(input, output) {
           
           output$plots <- shiny::renderPlot({
             
-            GGally::ggcorr(subset(usda.arms.api.env$plot_data, 
-                                  select=input$variables_visualisation)) 
+            GGally::ggcorr(isolate(subset(usda.arms.api.env$plot_data, 
+                                  select=input$variables_visualisation)))
             
           })
           
@@ -508,9 +508,9 @@ server <- function(input, output) {
               
               output$plots <- shiny::renderPlot({
                 
-                GGally::ggpairs(subset(usda.arms.api.env$plot_data,
-                                       select = input$variables_visualisation), 
-                                ggplot2::aes(colour=input$analysis_variable_visualisation)) 
+                GGally::ggpairs(shiny::isolate(subset(usda.arms.api.env$plot_data,
+                  select = input$variables_visualisation)), 
+                  ggplot2::aes(colour=input$analysis_variable_visualisation))
                 
               })
               
@@ -518,8 +518,8 @@ server <- function(input, output) {
               
               output$plots <- shiny::renderPlot({
                 
-                GGally::ggpairs(subset(usda.arms.api.env$plot_data, 
-                                       select = input$variables_visualisation)) 
+                GGally::ggpairs(shiny::isolate(subset(usda.arms.api.env$plot_data, 
+                  select = input$variables_visualisation))) 
                 
               })
               
@@ -529,8 +529,8 @@ server <- function(input, output) {
             
             output$plots <- shiny::renderPlot({
               
-              GGally::ggpairs(subset(usda.arms.api.env$plot_data, 
-                                     select = input$variables_visualisation)) 
+              GGally::ggpairs(isolate(subset(usda.arms.api.env$plot_data, 
+                select = input$variables_visualisation)))
               
             })
             
