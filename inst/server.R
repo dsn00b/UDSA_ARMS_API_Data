@@ -140,6 +140,7 @@ server <- function(input, output) {
         output$corr_plot_button <- shiny::renderText("")
         output$pair_plot_button <- shiny::renderText("")
         output$plots <- shiny::renderText("")
+        output$legend <- shiny::renderText("")
         output$pulled_data <- shiny::renderText("")
         
       } else { # success
@@ -168,6 +169,8 @@ server <- function(input, output) {
         output$analysis_variable <- shiny::renderText("")
         output$corr_plot_button <- shiny::renderText("")
         output$pair_plot_button <- shiny::renderText("")
+        output$plots <- shiny::renderText("")
+        output$legend <- shiny::renderText("")
         
         # 1.3.3.4. set up 'pulled data' tab
         output$pulled_data <- shiny::renderDataTable(usda.arms.api.env$pulled_data)
@@ -336,7 +339,7 @@ server <- function(input, output) {
         
       })
       
-      # 2.2.10. 'corr_plot_button'
+      # 2.2.10. 'pair_plot_button'
       output$pair_plot_button <- shiny::renderUI({
         
         shiny::actionButton(inputId = "pair_plot_clicked",
@@ -352,15 +355,17 @@ server <- function(input, output) {
         # 2.3.1.1. cull down a copy of sliced_data for leaner operations downstream
         
         # 2.3.1.1.1. filter by category, because one (and only one) category must be selected
-        usda.arms.api.env$plot_data <<- usda.arms.api.env$sliced_data[
-          usda.arms.api.env$sliced_data$category == input$category_visualisation, ]
+        usda.arms.api.env$plot_data <<- shiny::isolate(
+          usda.arms.api.env$sliced_data[
+          usda.arms.api.env$sliced_data$category == input$category_visualisation, ])
         
         # 2.3.1.1.2. filter by year
         if (nrow(usda.arms.api.env$plot_data) > 0 & 
             length(input$years_visualisation) > 0) {
           
-          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
-            usda.arms.api.env$plot_data$year %in% input$years_visualisation, ]
+          usda.arms.api.env$plot_data <<- shiny::isolate(
+            usda.arms.api.env$plot_data[
+            usda.arms.api.env$plot_data$year %in% input$years_visualisation, ])
           
         }
         
@@ -368,8 +373,9 @@ server <- function(input, output) {
         if (nrow(usda.arms.api.env$plot_data) > 0 &
             length(input$states_visualisation) > 0) {
           
-          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
-            usda.arms.api.env$plot_data$state %in% input$states_visualisation, ]
+          usda.arms.api.env$plot_data <<- shiny::isolate(
+            usda.arms.api.env$plot_data[
+            usda.arms.api.env$plot_data$state %in% input$states_visualisation, ])
           
         }
         
@@ -377,8 +383,9 @@ server <- function(input, output) {
         if (nrow(usda.arms.api.env$plot_data) > 0 &
             length(input$farmtype_visualisation) > 0) {
           
-          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
-            usda.arms.api.env$plot_data$farmtype %in% input$farmtype_visualisation, ]
+          usda.arms.api.env$plot_data <<- shiny::isolate(
+            usda.arms.api.env$plot_data[
+            usda.arms.api.env$plot_data$farmtype %in% input$farmtype_visualisation, ])
           
         }
         
@@ -386,9 +393,10 @@ server <- function(input, output) {
         if (nrow(usda.arms.api.env$plot_data) > 0 &
             length(input$cat_vals_visualisation) > 0) {
           
-          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
+          usda.arms.api.env$plot_data <<- shiny::isolate(
+            usda.arms.api.env$plot_data[
             usda.arms.api.env$plot_data$category_value %in% 
-              input$cat_vals_visualisation, ]
+              input$cat_vals_visualisation, ])
           
         }
         
@@ -397,21 +405,30 @@ server <- function(input, output) {
           
           if (length(input$avg_by_vars_visualisation) > 0) {
             
-            usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data %>% 
+            usda.arms.api.env$plot_data <<- shiny::isolate(
+              usda.arms.api.env$plot_data %>% 
               dplyr::select(c(input$avg_by_vars_visualisation, 
-                              input$variables_visualisation)) %>% 
+              input$variables_visualisation)) %>% 
               dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
-              dplyr::summarise_at(input$variables_visualisation, mean)
+              dplyr::summarise_at(input$variables_visualisation, mean))
             
           }
           
           else {
             
-            usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data %>% 
-              dplyr::select(input$variables_visualisation)          
+            usda.arms.api.env$plot_data <<- shiny::isolate(
+              usda.arms.api.env$plot_data %>% 
+              dplyr::select(input$variables_visualisation))
+              
           }
           
         }
+        
+        # 2.3.1.1.7. make variable names readable
+        usda.arms.api.env$plot_data <<- shiny::isolate(
+          data.table::setnames(usda.arms.api.env$plot_data,
+          old = input$variables_visualisation,
+          new = paste0("Var_", 1:(length(input$variables_visualisation)))))
         
         # 2.3.1.2. generate corr plot
         if (nrow(usda.arms.api.env$plot_data) > 0) {
@@ -419,7 +436,7 @@ server <- function(input, output) {
           output$plots <- shiny::renderPlot({
             
             GGally::ggcorr(isolate(subset(usda.arms.api.env$plot_data, 
-                                  select=input$variables_visualisation)))
+              select = paste0("Var_", 1:(length(input$variables_visualisation))))))
             
           })
           
@@ -427,6 +444,17 @@ server <- function(input, output) {
           
           output$plots <- shiny::renderText("Filters are too restrictive; 
               relax one or more filters")
+          
+        }
+
+        # 2.3.1.3. generate legend
+        if (nrow(usda.arms.api.env$plot_data) > 0) {
+          
+          usda.arms.api.env$legend <<- isolate(cbind(
+            Variable = paste0("Var_", 1:(length(input$variables_visualisation))),
+            Legend = input$variables_visualisation))
+          
+          output$legend <- shiny::renderDataTable(usda.arms.api.env$legend)
           
         }
         
@@ -438,15 +466,17 @@ server <- function(input, output) {
         # 2.3.2.1. cull down a copy of sliced_data for leaner operations downstream
         
         # 2.3.2.1.1. filter by category, because one (and only one) category must be selected
-        usda.arms.api.env$plot_data <<- usda.arms.api.env$sliced_data[
-          usda.arms.api.env$sliced_data$category == input$category_visualisation, ]
+        usda.arms.api.env$plot_data <<- shiny::isolate(
+          usda.arms.api.env$sliced_data[
+          usda.arms.api.env$sliced_data$category == input$category_visualisation, ])
         
         # 2.3.2.1.2. filter by year
         if (nrow(usda.arms.api.env$plot_data) > 0 & 
             length(input$years_visualisation) > 0) {
           
-          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
-            usda.arms.api.env$plot_data$year %in% input$years_visualisation, ]
+          usda.arms.api.env$plot_data <<- shiny::isolate(
+            usda.arms.api.env$plot_data[
+            usda.arms.api.env$plot_data$year %in% input$years_visualisation, ])
           
         }
         
@@ -454,8 +484,9 @@ server <- function(input, output) {
         if (nrow(usda.arms.api.env$plot_data) > 0 &
             length(input$states_visualisation) > 0) {
           
-          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
-            usda.arms.api.env$plot_data$state %in% input$states_visualisation, ]
+          usda.arms.api.env$plot_data <<- shiny::isolate(
+            usda.arms.api.env$plot_data[
+            usda.arms.api.env$plot_data$state %in% input$states_visualisation, ])
           
         }
         
@@ -463,8 +494,10 @@ server <- function(input, output) {
         if (nrow(usda.arms.api.env$plot_data) > 0 &
             length(input$farmtype_visualisation) > 0) {
           
-          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
-            usda.arms.api.env$plot_data$farmtype %in% input$farmtype_visualisation, ]
+          usda.arms.api.env$plot_data <<- shiny::isolate(
+            usda.arms.api.env$plot_data[
+            usda.arms.api.env$plot_data$farmtype %in% 
+            input$farmtype_visualisation, ])
           
         }
         
@@ -472,9 +505,10 @@ server <- function(input, output) {
         if (nrow(usda.arms.api.env$plot_data) > 0 &
             length(input$cat_vals_visualisation) > 0) {
           
-          usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data[
+          usda.arms.api.env$plot_data <<- shiny::isolate(
+            usda.arms.api.env$plot_data[
             usda.arms.api.env$plot_data$category_value %in% 
-              input$cat_vals_visualisation, ]
+              input$cat_vals_visualisation, ])
           
         }
         
@@ -483,21 +517,29 @@ server <- function(input, output) {
           
           if (length(input$avg_by_vars_visualisation) > 0) {
             
-            usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data %>% 
+            usda.arms.api.env$plot_data <<- shiny::isolate(
+              usda.arms.api.env$plot_data %>% 
               dplyr::select(c(input$avg_by_vars_visualisation, 
-                              input$variables_visualisation)) %>% 
+              input$variables_visualisation)) %>% 
               dplyr::group_by_at(input$avg_by_vars_visualisation) %>% 
-              dplyr::summarise_at(input$variables_visualisation, mean)
+              dplyr::summarise_at(input$variables_visualisation, mean))
             
           }
           
           else {
             
-            usda.arms.api.env$plot_data <<- usda.arms.api.env$plot_data %>% 
-              dplyr::select(input$variables_visualisation)          
+            usda.arms.api.env$plot_data <<- shiny::isolate(
+              usda.arms.api.env$plot_data %>% 
+              dplyr::select(input$variables_visualisation))          
           }
           
         }
+        
+        # 2.3.2.1.7. make variable names readable
+        usda.arms.api.env$plot_data <<- shiny::isolate(
+          data.table::setnames(usda.arms.api.env$plot_data,
+          old = input$variables_visualisation,
+          new = paste0("Var_", 1:(length(input$variables_visualisation)))))
         
         # 2.3.2.2. generate pair plots
         if (nrow(usda.arms.api.env$plot_data) > 0) {
@@ -509,7 +551,7 @@ server <- function(input, output) {
               output$plots <- shiny::renderPlot({
                 
                 GGally::ggpairs(shiny::isolate(subset(usda.arms.api.env$plot_data,
-                  select = input$variables_visualisation)), 
+                  select = paste0("Var_", 1:(length(input$variables_visualisation))))), 
                   ggplot2::aes(colour=input$analysis_variable_visualisation))
                 
               })
@@ -519,7 +561,7 @@ server <- function(input, output) {
               output$plots <- shiny::renderPlot({
                 
                 GGally::ggpairs(shiny::isolate(subset(usda.arms.api.env$plot_data, 
-                  select = input$variables_visualisation))) 
+                  select = paste0("Var_", 1:(length(input$variables_visualisation))))))
                 
               })
               
@@ -530,7 +572,7 @@ server <- function(input, output) {
             output$plots <- shiny::renderPlot({
               
               GGally::ggpairs(isolate(subset(usda.arms.api.env$plot_data, 
-                select = input$variables_visualisation)))
+                select = paste0("Var_", 1:(length(input$variables_visualisation))))))
               
             })
             
@@ -540,6 +582,17 @@ server <- function(input, output) {
           
           output$plots <- shiny::renderText("Filters are too restrictive; 
           relax one or more filters")
+          
+        }
+        
+        # 2.3.2.3. generate legend
+        if (nrow(usda.arms.api.env$plot_data) > 0) {
+          
+          usda.arms.api.env$legend <<- isolate(cbind(
+            Variable = paste0("Var_", 1:(length(input$variables_visualisation))),
+            Legend = input$variables_visualisation))
+          
+          output$legend <- shiny::renderDataTable(usda.arms.api.env$legend)
           
         }
         
@@ -555,7 +608,7 @@ server <- function(input, output) {
       if ("pulled_data" %in% ls(usda.arms.api.env)) {
         
         write.csv(usda.arms.api.env$pulled_data, 
-                  paste("download_", Sys.time(), ".csv"))
+          paste("download_", Sys.time(), ".csv"))
         shiny::showModal(modalDialog(title = "Success", "Data Downloaded as CSV"))
         
       } else {

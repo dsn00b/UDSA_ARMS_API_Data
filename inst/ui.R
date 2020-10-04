@@ -78,7 +78,10 @@ ui <- shiny::fluidPage(
         shiny::mainPanel(
           
           # Output: Plots
-          shiny::plotOutput(outputId = "plots")
+          shiny::plotOutput(outputId = "plots"),
+          
+          # Output: Legend
+          shiny::dataTableOutput(outputId = "legend")
           
         )
       )
