@@ -9,7 +9,7 @@ refresh_metadata <- function() {
   
   # initialise
 
-  key_parameter <- "api_key=UzCB1lR6AR7XyiUpyIlhYYHuodrznWx1NqdHJgtz"
+  key_parameter <- "api_key=xxxxxxxxxxxxxxxxx"
   
   # get 'years' metadata
   
