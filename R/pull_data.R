@@ -47,7 +47,7 @@ pull_data <- function(year, report, state = "all", farmtype = 1, variable = "all
   # initialise basic variables
   
   end_point <- "https://api.ers.usda.gov/data/arms/surveydata?"
-  key_parameter <- "api_key=UzCB1lR6AR7XyiUpyIlhYYHuodrznWx1NqdHJgtz"
+  key_parameter <- "api_key=xxxxxxxxxxxxxxxx"
   
   if (!exists("metadata")) {metadata <- refresh_metadata()}
   
